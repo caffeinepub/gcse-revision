@@ -9,8 +9,6 @@ import type {
   SubjectId,
   Topic,
   TopicId,
-  TopicImage,
-  TopicImageId,
 } from "../backend.d";
 import { useActor } from "./useActor";
 
@@ -133,9 +131,70 @@ export function useSetSubjectImage() {
       if (!actor) throw new Error("No actor");
       return actor.setSubjectImage(subjectId, blob);
     },
-    onSuccess: (_data, vars) =>
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({
         queryKey: ["subjectImage", vars.subjectId.toString()],
+      });
+      qc.invalidateQueries({
+        queryKey: ["subjectImages", vars.subjectId.toString()],
+      });
+    },
+  });
+}
+
+// ── Multi-image per subject ────────────────────────────────────────────────────
+
+import type { SubjectImageEntry, SubjectImageId } from "../backend.d";
+
+export function useSubjectImages(subjectId: SubjectId | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<SubjectImageEntry[]>({
+    queryKey: ["subjectImages", subjectId?.toString()],
+    queryFn: async () => {
+      if (!actor || subjectId === undefined) return [];
+      return actor.listSubjectImages(subjectId);
+    },
+    enabled: !!actor && !isFetching && subjectId !== undefined,
+  });
+}
+
+export function useAddSubjectImage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      subjectId,
+      blob,
+    }: {
+      subjectId: SubjectId;
+      blob: ExternalBlob;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.addSubjectImage(subjectId, blob);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subjectImages", vars.subjectId.toString()],
+      }),
+  });
+}
+
+export function useRemoveSubjectImage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      imageId,
+    }: {
+      imageId: SubjectImageId;
+      subjectId: SubjectId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.removeSubjectImage(imageId);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subjectImages", vars.subjectId.toString()],
       }),
   });
 }
@@ -296,61 +355,6 @@ export function useUpdatePastPaperNotes() {
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({
         queryKey: ["pastPapers", vars.subjectId.toString()],
-      }),
-  });
-}
-
-// ── Topic Images ───────────────────────────────────────────────────────────────
-
-export function useTopicImages(topicId: TopicId | undefined) {
-  const { actor, isFetching } = useActor();
-  return useQuery<TopicImage[]>({
-    queryKey: ["topicImages", topicId?.toString()],
-    queryFn: async () => {
-      if (!actor || topicId === undefined) return [];
-      return actor.listTopicImages(topicId);
-    },
-    enabled: !!actor && !isFetching && topicId !== undefined,
-  });
-}
-
-export function useAddTopicImage() {
-  const { actor } = useActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      topicId,
-      blob,
-    }: {
-      topicId: TopicId;
-      blob: ExternalBlob;
-    }) => {
-      if (!actor) throw new Error("No actor");
-      return actor.addTopicImage(topicId, blob);
-    },
-    onSuccess: (_data, vars) =>
-      qc.invalidateQueries({
-        queryKey: ["topicImages", vars.topicId.toString()],
-      }),
-  });
-}
-
-export function useRemoveTopicImage() {
-  const { actor } = useActor();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      topicImageId,
-    }: {
-      topicImageId: TopicImageId;
-      topicId: TopicId;
-    }) => {
-      if (!actor) throw new Error("No actor");
-      return actor.removeTopicImage(topicImageId);
-    },
-    onSuccess: (_data, vars) =>
-      qc.invalidateQueries({
-        queryKey: ["topicImages", vars.topicId.toString()],
       }),
   });
 }

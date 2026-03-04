@@ -1,10 +1,4 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -22,8 +16,8 @@ import {
   Download,
   FileText,
   GraduationCap,
-  ImageIcon,
   Loader2,
+  Plus,
   PlusCircle,
   Trash2,
   X,
@@ -32,16 +26,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
+import type { SubjectImageId } from "../backend.d";
 import PastPaperList from "../components/PastPaperList";
 import SubTopicList from "../components/SubTopicList";
-import TopicImageStrip from "../components/TopicImageStrip";
 import { useLearnedTopics } from "../hooks/useLearnedTopics";
 import {
+  useAddSubjectImage,
   useAddTopic,
   usePastPapers,
+  useRemoveSubjectImage,
   useRemoveTopic,
-  useSetSubjectImage,
-  useSubjectImage,
+  useSubjectImages,
   useSubjects,
   useTopics,
 } from "../hooks/useQueries";
@@ -64,9 +59,10 @@ export default function SubjectPage() {
   const addTopic = useAddTopic();
   const removeTopic = useRemoveTopic();
 
-  const { data: subjectImage, isLoading: imageLoading } =
-    useSubjectImage(subjectId);
-  const setSubjectImage = useSetSubjectImage();
+  const { data: subjectImages, isLoading: imagesLoading } =
+    useSubjectImages(subjectId);
+  const addSubjectImage = useAddSubjectImage();
+  const removeSubjectImage = useRemoveSubjectImage();
 
   const { data: pastPapers } = usePastPapers(subjectId);
 
@@ -96,7 +92,6 @@ export default function SubjectPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleDownloadImage() {
@@ -261,21 +256,18 @@ export default function SubjectPage() {
     setUploadProgress(0);
 
     try {
-      // Read the file as bytes
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
 
-      // Create ExternalBlob with upload progress tracking
       const externalBlob = ExternalBlob.fromBytes(bytes).withUploadProgress(
         (percentage: number) => {
           setUploadProgress(percentage);
         },
       );
 
-      await setSubjectImage.mutateAsync({ subjectId, blob: externalBlob });
-      toast.success("Subject image uploaded!");
+      await addSubjectImage.mutateAsync({ subjectId, blob: externalBlob });
+      toast.success("Image uploaded!");
       setUploadProgress(null);
-      setShowUploadReplacement(false);
     } catch {
       toast.error("Failed to upload image. Please try again.");
       setUploadProgress(null);
@@ -308,24 +300,19 @@ export default function SubjectPage() {
     setIsDragOver(false);
   }
 
-  async function handleDeleteImage() {
-    // To "delete" we can't truly delete from blob storage, but we clear the reference
-    // by calling setSubjectImage with an empty placeholder — or we just rely on UX
-    // (show upload again). For now, let's just clear the local reference by re-querying.
-    // The actual implementation: upload an empty state isn't ideal.
-    // Better: keep a local "deleted" state so user can re-upload.
-    // Since we can't call a deleteSubjectImage API, we'll just let the user re-upload.
-    // We trigger a re-upload by showing the upload UI again via a local state flag.
-    setShowUploadReplacement(true);
+  async function handleRemoveImage(imageId: SubjectImageId) {
+    try {
+      await removeSubjectImage.mutateAsync({ imageId, subjectId });
+      toast.success("Image removed.");
+    } catch {
+      toast.error("Failed to remove image.");
+    }
   }
-
-  const [showUploadReplacement, setShowUploadReplacement] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const isLoading = subjectsLoading || topicsLoading;
 
-  const imageUrl = subjectImage ? subjectImage.getDirectURL() : null;
-  const hasImage = !!imageUrl && !showUploadReplacement;
+  const hasImages = (subjectImages?.length ?? 0) > 0;
 
   return (
     <div className="min-h-screen flex flex-col" data-ocid="subject_detail.page">
@@ -375,32 +362,6 @@ export default function SubjectPage() {
               <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
                 {subject.name}
               </h1>
-              {/* All Topics button */}
-              <button
-                type="button"
-                data-ocid="subject.all_topics_button"
-                onClick={() => hasImage && setImageDialogOpen(true)}
-                disabled={!hasImage || imageLoading}
-                title={
-                  imageLoading
-                    ? "Loading image…"
-                    : !hasImage
-                      ? "No image uploaded yet"
-                      : "View attached image"
-                }
-                className={[
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-body font-medium transition-all border",
-                  hasImage && !imageLoading
-                    ? "bg-card border-border text-foreground hover:bg-secondary hover:border-foreground/20 shadow-xs cursor-pointer"
-                    : "bg-muted/50 border-border/50 text-muted-foreground cursor-not-allowed opacity-60",
-                ].join(" ")}
-                aria-label={
-                  hasImage ? "View attached image" : "No image uploaded yet"
-                }
-              >
-                <ImageIcon className="w-3.5 h-3.5" />
-                All Topics
-              </button>
             </div>
           ) : (
             <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
@@ -409,154 +370,147 @@ export default function SubjectPage() {
           )}
         </motion.div>
 
-        {/* Image upload / preview section */}
-        <AnimatePresence mode="wait">
-          {imageLoading ? (
-            <motion.div
-              key="img-loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-20 rounded-2xl"
-            >
-              <Skeleton className="h-full w-full rounded-2xl" />
-            </motion.div>
-          ) : hasImage ? (
-            <motion.div
-              key="img-preview"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.3 }}
-              className="relative group rounded-2xl overflow-hidden border border-border shadow-card"
-              data-ocid="subject.image_preview"
-            >
-              <img
-                src={imageUrl!}
-                alt={subject?.name ?? "Subject"}
-                className="w-full h-auto"
-              />
-              {/* Overlay controls */}
-              <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setImageDialogOpen(true)}
-                  className="rounded-xl font-body text-xs gap-1.5 shadow-md"
-                  aria-label="View full image"
-                >
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  View
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-ocid="subject.image_delete_button"
-                  onClick={handleDeleteImage}
-                  className="rounded-xl font-body text-xs gap-1.5 shadow-md border-destructive/30 text-destructive hover:bg-destructive/10"
-                  aria-label="Remove or replace image"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Replace
-                </Button>
-              </div>
-              {/* Corner label */}
-              <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-card/80 backdrop-blur-sm text-xs font-body text-muted-foreground">
-                Subject image
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="img-upload"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Upload dropzone */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={[
-                  "relative rounded-2xl border-2 border-dashed transition-all duration-200",
-                  isDragOver
-                    ? "border-primary/60 bg-primary/5 scale-[1.01]"
-                    : "border-border",
-                ].join(" ")}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  id="subject-image-upload"
-                  className="sr-only"
-                  onChange={handleFileInputChange}
-                  disabled={isUploading}
+        {/* Multi-image strip section */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {imagesLoading ? (
+            <div className="flex gap-3 overflow-hidden">
+              {[1, 2, 3].map((k) => (
+                <Skeleton
+                  key={k}
+                  className="w-24 h-24 rounded-xl flex-shrink-0"
                 />
-                <label
-                  data-ocid="subject.image_upload_button"
-                  htmlFor="subject-image-upload"
-                  className={[
-                    "flex flex-col items-center gap-3 text-center p-6 rounded-2xl cursor-pointer focus-within:ring-2 focus-within:ring-ring",
-                    !isUploading
-                      ? "hover:bg-secondary/40"
-                      : "pointer-events-none",
-                  ].join(" ")}
-                >
-                  {isUploading ? (
-                    <>
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                      </div>
-                      <div className="space-y-2 w-full max-w-xs">
-                        <p className="text-sm font-body text-foreground font-medium">
-                          Uploading image…
-                        </p>
-                        {uploadProgress !== null && (
-                          <Progress
-                            value={uploadProgress}
-                            className="h-1.5 rounded-full"
-                          />
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div
-                        className={[
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                          isDragOver ? "bg-primary/20" : "bg-muted",
-                        ].join(" ")}
+              ))}
+            </div>
+          ) : (
+            <div
+              data-ocid="subject.image_dropzone"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={[
+                "relative rounded-2xl transition-all duration-200 p-3",
+                isDragOver
+                  ? "border-2 border-dashed border-primary/60 bg-primary/5 scale-[1.005]"
+                  : hasImages || isUploading
+                    ? "border border-border bg-card/50 space-y-3"
+                    : "border-2 border-dashed border-border",
+              ].join(" ")}
+            >
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                id="subject-image-upload"
+                className="sr-only"
+                onChange={handleFileInputChange}
+                disabled={isUploading}
+              />
+
+              {/* Drag overlay hint */}
+              {isDragOver && (
+                <div className="absolute inset-0 rounded-2xl flex items-center justify-center z-10 pointer-events-none">
+                  <div className="bg-primary/90 text-primary-foreground rounded-xl px-4 py-2 text-sm font-body font-medium shadow-lg">
+                    Drop to add image
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 w-full">
+                {/* Full-size images */}
+                <AnimatePresence>
+                  {(subjectImages ?? []).map((entry, idx) => {
+                    const imgUrl = entry.blob.getDirectURL();
+                    const ocidIdx = idx + 1;
+                    return (
+                      <motion.div
+                        key={entry.id.toString()}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2 }}
+                        className="relative group/thumb"
                       >
-                        <ImageIcon
-                          className={[
-                            "w-5 h-5 transition-colors",
-                            isDragOver
-                              ? "text-primary"
-                              : "text-muted-foreground",
-                          ].join(" ")}
+                        {/* Full-size image */}
+                        <img
+                          src={imgUrl}
+                          alt={`${subject?.name ?? "Subject"} ${ocidIdx}`}
+                          className="w-auto max-w-full h-auto rounded-xl border border-border shadow-xs"
+                          style={{ display: "block" }}
                         />
-                      </div>
-                      <div>
-                        <p className="text-sm font-body font-medium text-foreground">
-                          {isDragOver
-                            ? "Drop to upload"
-                            : "Upload subject image"}
-                        </p>
-                        <p className="text-xs font-body text-muted-foreground mt-0.5">
-                          Drag & drop or click to browse — JPG, PNG, GIF, WebP
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </label>
+                        {/* Remove X button */}
+                        <button
+                          type="button"
+                          data-ocid={`subject.image_remove_button.${ocidIdx}`}
+                          onClick={() => handleRemoveImage(entry.id)}
+                          aria-label={`Remove image ${ocidIdx}`}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md opacity-0 group-hover/thumb:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring z-10"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Upload in progress */}
+                {isUploading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-3 py-3"
+                  >
+                    <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
+                    {uploadProgress !== null && (
+                      <Progress
+                        value={uploadProgress}
+                        className="h-1.5 flex-1 rounded-full"
+                      />
+                    )}
+                    <span className="text-sm font-body text-muted-foreground flex-shrink-0">
+                      Uploading…
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Add image button */}
+                {!isUploading && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <label
+                      data-ocid="subject.image_add_button"
+                      htmlFor="subject-image-upload"
+                      className={[
+                        "inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 focus-within:ring-2 focus-within:ring-ring text-sm font-body font-medium",
+                        isDragOver
+                          ? "border-primary/60 bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:bg-secondary/40 hover:text-foreground",
+                      ].join(" ")}
+                      aria-label="Add image"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add image
+                    </label>
+                  </motion.div>
+                )}
+
+                {/* Empty state hint when no images */}
+                {!hasImages && !isUploading && (
+                  <p className="text-sm font-body text-muted-foreground">
+                    Drag & drop or click{" "}
+                    <span className="font-medium text-foreground">
+                      + Add image
+                    </span>{" "}
+                    to upload images for this subject
+                  </p>
+                )}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </motion.div>
 
         <Separator />
 
@@ -792,13 +746,6 @@ export default function SubjectPage() {
                                 )}
 
                                 <div className="pl-6">
-                                  <TopicImageStrip
-                                    topicId={topic.id}
-                                    accentColor={color?.bg}
-                                  />
-                                </div>
-
-                                <div className="pl-6">
                                   <SubTopicList
                                     topicId={topic.id}
                                     accentColor={color?.bg}
@@ -925,45 +872,6 @@ export default function SubjectPage() {
           Built with love using caffeine.ai
         </a>
       </footer>
-
-      {/* Full-image dialog */}
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent
-          data-ocid="subject.image_dialog"
-          className="max-w-[95vw] w-full p-0 overflow-hidden rounded-2xl"
-          aria-describedby="subject-image-description"
-        >
-          <DialogHeader className="px-5 pt-5 pb-3 flex flex-row items-center justify-between">
-            <DialogTitle className="font-display text-lg font-semibold text-foreground">
-              {subject?.name ?? "Subject"} — Image
-            </DialogTitle>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              data-ocid="subject.image_dialog.close_button"
-              onClick={() => setImageDialogOpen(false)}
-              className="rounded-xl w-8 h-8 flex-shrink-0"
-              aria-label="Close image dialog"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </DialogHeader>
-          <p id="subject-image-description" className="sr-only">
-            Full view of the uploaded image for{" "}
-            {subject?.name ?? "this subject"}
-          </p>
-          {imageUrl && (
-            <div className="px-5 pb-5">
-              <img
-                src={imageUrl}
-                alt={subject?.name ?? "Subject"}
-                className="w-full h-auto rounded-xl"
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

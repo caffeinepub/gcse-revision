@@ -32,6 +32,12 @@ export interface Subject {
   'image' : [] | [ExternalBlob],
 }
 export type SubjectId = bigint;
+export interface SubjectImageEntry {
+  'id' : SubjectImageId,
+  'blob' : ExternalBlob,
+  'subjectId' : SubjectId,
+}
+export type SubjectImageId = bigint;
 export interface Topic {
   'id' : TopicId,
   'title' : string,
@@ -39,12 +45,6 @@ export interface Topic {
   'notes' : string,
 }
 export type TopicId = bigint;
-export interface TopicImage {
-  'id' : TopicImageId,
-  'blob' : ExternalBlob,
-  'topicId' : TopicId,
-}
-export type TopicImageId = bigint;
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -78,19 +78,19 @@ export interface _SERVICE {
   >,
   'addSubTopic' : ActorMethod<[TopicId, string, string], SubTopicId>,
   'addSubject' : ActorMethod<[string], SubjectId>,
+  'addSubjectImage' : ActorMethod<[SubjectId, ExternalBlob], SubjectImageId>,
   'addTopic' : ActorMethod<[SubjectId, string, string], TopicId>,
-  'addTopicImage' : ActorMethod<[TopicId, ExternalBlob], TopicImageId>,
   'getSubjectImage' : ActorMethod<[SubjectId], [] | [ExternalBlob]>,
   'listPastPapersForSubject' : ActorMethod<[SubjectId], Array<PastPaper>>,
   'listSubTopicsForTopic' : ActorMethod<[TopicId], Array<SubTopic>>,
+  'listSubjectImages' : ActorMethod<[SubjectId], Array<SubjectImageEntry>>,
   'listSubjects' : ActorMethod<[], Array<Subject>>,
-  'listTopicImages' : ActorMethod<[TopicId], Array<TopicImage>>,
   'listTopicsForSubject' : ActorMethod<[SubjectId], Array<Topic>>,
   'removePastPaper' : ActorMethod<[PastPaperId], undefined>,
   'removeSubTopic' : ActorMethod<[SubTopicId], undefined>,
   'removeSubject' : ActorMethod<[SubjectId], undefined>,
+  'removeSubjectImage' : ActorMethod<[SubjectImageId], undefined>,
   'removeTopic' : ActorMethod<[TopicId], undefined>,
-  'removeTopicImage' : ActorMethod<[TopicImageId], undefined>,
   'setSubjectImage' : ActorMethod<[SubjectId, ExternalBlob], undefined>,
   'updatePastPaperNotes' : ActorMethod<[PastPaperId, string], undefined>,
   'updateSubTopicNotes' : ActorMethod<[SubTopicId, string], undefined>,

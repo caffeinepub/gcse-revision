@@ -1,10 +1,10 @@
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
-import Array "mo:core/Array";
 import Nat "mo:core/Nat";
-import Migration "migration";
 
-(with migration = Migration.run)
+import Array "mo:core/Array";
+
+
 actor {
   include MixinStorage();
 
@@ -12,29 +12,29 @@ actor {
   type TopicId = Nat;
   type SubTopicId = Nat;
   type PastPaperId = Nat;
-  type TopicImageId = Nat;
+  type SubjectImageId = Nat;
 
-  public type Subject = {
+  type Subject = {
     id : SubjectId;
     name : Text;
     image : ?Storage.ExternalBlob;
   };
 
-  public type Topic = {
+  type Topic = {
     id : TopicId;
     subjectId : SubjectId;
     title : Text;
     notes : Text;
   };
 
-  public type SubTopic = {
+  type SubTopic = {
     id : SubTopicId;
     topicId : TopicId;
     heading : Text;
     notes : Text;
   };
 
-  public type PastPaper = {
+  type PastPaper = {
     id : PastPaperId;
     subjectId : SubjectId;
     title : Text;
@@ -42,9 +42,9 @@ actor {
     notes : Text;
   };
 
-  public type TopicImage = {
-    id : TopicImageId;
-    topicId : TopicId;
+  type SubjectImageEntry = {
+    id : SubjectImageId;
+    subjectId : SubjectId;
     blob : Storage.ExternalBlob;
   };
 
@@ -52,13 +52,13 @@ actor {
   var nextTopicId = 1;
   var nextSubTopicId = 1;
   var nextPastPaperId = 1;
-  var nextTopicImageId = 1;
+  var nextSubjectImageId = 1;
 
   var subjectStore : [Subject] = [];
   var topicStore : [Topic] = [];
   var subTopicStore : [SubTopic] = [];
   var pastPaperStore : [PastPaper] = [];
-  var topicImageStore : [TopicImage] = [];
+  var subjectImageStore : [SubjectImageEntry] = [];
 
   // Subject Management
   public shared ({ caller }) func addSubject(name : Text) : async SubjectId {
@@ -72,6 +72,7 @@ actor {
     subject.id;
   };
 
+  // Legacy: sets primary subject image (keep for compatibility)
   public shared ({ caller }) func setSubjectImage(subjectId : SubjectId, blob : Storage.ExternalBlob) : async () {
     subjectStore := subjectStore.map(
       func(subject) {
@@ -82,8 +83,31 @@ actor {
         };
       }
     );
+
+    // Also update first image entry in subjectImageStore for backwards compatibility
+    let entriesForSubject = subjectImageStore.filter(func(entry) { entry.subjectId == subjectId });
+    if (entriesForSubject.size() == 0) {
+      let newEntry : SubjectImageEntry = {
+        id = nextSubjectImageId;
+        subjectId;
+        blob;
+      };
+      subjectImageStore := subjectImageStore.concat([newEntry]);
+      nextSubjectImageId += 1;
+    } else {
+      subjectImageStore := subjectImageStore.map(
+        func(entry) {
+          if (entry.subjectId == subjectId) {
+            { entry with blob };
+          } else {
+            entry;
+          };
+        }
+      );
+    };
   };
 
+  // Legacy: gets primary subject image (keep for compatibility)
   public query ({ caller }) func getSubjectImage(subjectId : SubjectId) : async ?Storage.ExternalBlob {
     switch (subjectStore.find(func(subject) { subject.id == subjectId })) {
       case (null) { null };
@@ -98,6 +122,33 @@ actor {
   public shared ({ caller }) func removeSubject(subjectId : SubjectId) : async () {
     subjectStore := subjectStore.filter(
       func(subject) { subject.id != subjectId }
+    );
+
+    // Also remove all subject images for this subject
+    subjectImageStore := subjectImageStore.filter(
+      func(image) { image.subjectId != subjectId }
+    );
+  };
+
+  // Multi-Image Support
+  public shared ({ caller }) func addSubjectImage(subjectId : SubjectId, blob : Storage.ExternalBlob) : async SubjectImageId {
+    let entry : SubjectImageEntry = {
+      id = nextSubjectImageId;
+      subjectId;
+      blob;
+    };
+    subjectImageStore := subjectImageStore.concat([entry]);
+    nextSubjectImageId += 1;
+    entry.id;
+  };
+
+  public query ({ caller }) func listSubjectImages(subjectId : SubjectId) : async [SubjectImageEntry] {
+    subjectImageStore.filter(func(entry) { entry.subjectId == subjectId });
+  };
+
+  public shared ({ caller }) func removeSubjectImage(imageId : SubjectImageId) : async () {
+    subjectImageStore := subjectImageStore.filter(
+      func(entry) { entry.id != imageId }
     );
   };
 
@@ -192,28 +243,6 @@ actor {
           paper;
         };
       }
-    );
-  };
-
-  // Topic Image Management
-  public shared ({ caller }) func addTopicImage(topicId : TopicId, blob : Storage.ExternalBlob) : async TopicImageId {
-    let topicImage : TopicImage = {
-      id = nextTopicImageId;
-      topicId;
-      blob;
-    };
-    topicImageStore := topicImageStore.concat([topicImage]);
-    nextTopicImageId += 1;
-    topicImage.id;
-  };
-
-  public query ({ caller }) func listTopicImages(topicId : TopicId) : async [TopicImage] {
-    topicImageStore.filter(func(image) { image.topicId == topicId });
-  };
-
-  public shared ({ caller }) func removeTopicImage(topicImageId : TopicImageId) : async () {
-    topicImageStore := topicImageStore.filter(
-      func(image) { image.id != topicImageId }
     );
   };
 };
