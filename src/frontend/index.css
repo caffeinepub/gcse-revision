@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Outfit";
+  src: url("/assets/fonts/Outfit[wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Core palette — warm study lounge */
+    --background: 0.98 0.006 80;
+    --foreground: 0.18 0.015 250;
+    --card: 1 0 0;
+    --card-foreground: 0.18 0.015 250;
+    --popover: 1 0 0;
+    --popover-foreground: 0.18 0.015 250;
+    --primary: 0.22 0.02 250;
+    --primary-foreground: 0.98 0 0;
+    --secondary: 0.94 0.012 80;
+    --secondary-foreground: 0.22 0.02 250;
+    --muted: 0.94 0.008 80;
+    --muted-foreground: 0.52 0.018 250;
+    --accent: 0.62 0.18 145;
+    --accent-foreground: 1 0 0;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.88 0.012 80;
+    --input: 0.88 0.012 80;
+    --ring: 0.55 0.12 250;
+
+    /* Subject card palette */
+    --subject-coral: 0.65 0.2 25;
+    --subject-teal: 0.58 0.17 185;
+    --subject-amber: 0.72 0.19 75;
+    --subject-violet: 0.58 0.2 280;
+    --subject-sky: 0.6 0.18 230;
+    --subject-rose: 0.62 0.22 355;
+    --subject-emerald: 0.6 0.18 155;
+    --subject-orange: 0.68 0.21 48;
+
+    --chart-1: 0.65 0.2 25;
+    --chart-2: 0.58 0.17 185;
+    --chart-3: 0.72 0.19 75;
+    --chart-4: 0.58 0.2 280;
+    --chart-5: 0.6 0.18 230;
+
+    --sidebar: 0.985 0 0;
+    --sidebar-foreground: 0.18 0.015 250;
+    --sidebar-primary: 0.22 0.02 250;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.94 0.008 80;
+    --sidebar-accent-foreground: 0.22 0.02 250;
+    --sidebar-border: 0.88 0.012 80;
+    --sidebar-ring: 0.55 0.12 250;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+}
