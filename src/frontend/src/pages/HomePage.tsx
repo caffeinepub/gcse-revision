@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   useAddSubject,
@@ -26,6 +26,19 @@ const SAMPLE_SUGGESTIONS = [
   "Chemistry",
   "Physics",
   "History",
+  "PE",
+  "RE",
+];
+
+const DEFAULT_SUBJECTS = [
+  "Maths",
+  "English",
+  "Biology",
+  "Physics",
+  "History",
+  "Chemistry",
+  "PE",
+  "RE",
 ];
 
 const SKELETON_KEYS = ["sk1", "sk2", "sk3", "sk4", "sk5", "sk6"];
@@ -37,6 +50,33 @@ export default function HomePage() {
   const { data: subjects, isLoading, isError } = useSubjects();
   const addSubject = useAddSubject();
   const removeSubject = useRemoveSubject();
+  const seededRef = useRef(false);
+  const addSubjectRef = useRef(addSubject.mutateAsync);
+  addSubjectRef.current = addSubject.mutateAsync;
+
+  // Auto-seed extra subjects if they are not already present
+  useEffect(() => {
+    if (seededRef.current || !subjects) return;
+    const existingNames = subjects.map((s) => s.name.toLowerCase());
+    const missing = DEFAULT_SUBJECTS.filter(
+      (name) => !existingNames.includes(name.toLowerCase()),
+    );
+    if (missing.length === 0) {
+      seededRef.current = true;
+      return;
+    }
+    seededRef.current = true;
+    const mutate = addSubjectRef.current;
+    (async () => {
+      for (const name of missing) {
+        try {
+          await mutate(name);
+        } catch {
+          // ignore seed errors silently
+        }
+      }
+    })();
+  }, [subjects]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();

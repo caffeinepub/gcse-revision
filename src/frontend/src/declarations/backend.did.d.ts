@@ -10,7 +10,27 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface Subject { 'id' : SubjectId, 'name' : string }
+export type ExternalBlob = Uint8Array;
+export interface PastPaper {
+  'id' : PastPaperId,
+  'title' : string,
+  'year' : [] | [bigint],
+  'subjectId' : SubjectId,
+  'notes' : string,
+}
+export type PastPaperId = bigint;
+export interface SubTopic {
+  'id' : SubTopicId,
+  'heading' : string,
+  'notes' : string,
+  'topicId' : TopicId,
+}
+export type SubTopicId = bigint;
+export interface Subject {
+  'id' : SubjectId,
+  'name' : string,
+  'image' : [] | [ExternalBlob],
+}
 export type SubjectId = bigint;
 export interface Topic {
   'id' : TopicId,
@@ -19,13 +39,52 @@ export interface Topic {
   'notes' : string,
 }
 export type TopicId = bigint;
+export interface _CaffeineStorageCreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
+export interface _CaffeineStorageRefillInformation {
+  'proposed_top_up_amount' : [] | [bigint],
+}
+export interface _CaffeineStorageRefillResult {
+  'success' : [] | [boolean],
+  'topped_up_amount' : [] | [bigint],
+}
 export interface _SERVICE {
+  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
+  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array>],
+    undefined
+  >,
+  '_caffeineStorageCreateCertificate' : ActorMethod<
+    [string],
+    _CaffeineStorageCreateCertificateResult
+  >,
+  '_caffeineStorageRefillCashier' : ActorMethod<
+    [[] | [_CaffeineStorageRefillInformation]],
+    _CaffeineStorageRefillResult
+  >,
+  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  'addPastPaper' : ActorMethod<
+    [SubjectId, string, [] | [bigint], string],
+    PastPaperId
+  >,
+  'addSubTopic' : ActorMethod<[TopicId, string, string], SubTopicId>,
   'addSubject' : ActorMethod<[string], SubjectId>,
   'addTopic' : ActorMethod<[SubjectId, string, string], TopicId>,
+  'getSubjectImage' : ActorMethod<[SubjectId], [] | [ExternalBlob]>,
+  'listPastPapersForSubject' : ActorMethod<[SubjectId], Array<PastPaper>>,
+  'listSubTopicsForTopic' : ActorMethod<[TopicId], Array<SubTopic>>,
   'listSubjects' : ActorMethod<[], Array<Subject>>,
   'listTopicsForSubject' : ActorMethod<[SubjectId], Array<Topic>>,
+  'removePastPaper' : ActorMethod<[PastPaperId], undefined>,
+  'removeSubTopic' : ActorMethod<[SubTopicId], undefined>,
   'removeSubject' : ActorMethod<[SubjectId], undefined>,
   'removeTopic' : ActorMethod<[TopicId], undefined>,
+  'setSubjectImage' : ActorMethod<[SubjectId, ExternalBlob], undefined>,
+  'updatePastPaperNotes' : ActorMethod<[PastPaperId, string], undefined>,
+  'updateSubTopicNotes' : ActorMethod<[SubTopicId, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

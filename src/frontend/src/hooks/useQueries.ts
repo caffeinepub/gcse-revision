@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Subject, SubjectId, Topic, TopicId } from "../backend.d";
+import type { ExternalBlob } from "../backend";
+import type {
+  PastPaper,
+  PastPaperId,
+  SubTopic,
+  SubTopicId,
+  Subject,
+  SubjectId,
+  Topic,
+  TopicId,
+} from "../backend.d";
 import { useActor } from "./useActor";
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
@@ -90,5 +100,200 @@ export function useRemoveTopic() {
     },
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({ queryKey: ["topics", vars.subjectId.toString()] }),
+  });
+}
+
+// ── Subject Images ─────────────────────────────────────────────────────────────
+
+export function useSubjectImage(subjectId: SubjectId | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ExternalBlob | null>({
+    queryKey: ["subjectImage", subjectId?.toString()],
+    queryFn: async () => {
+      if (!actor || subjectId === undefined) return null;
+      return actor.getSubjectImage(subjectId);
+    },
+    enabled: !!actor && !isFetching && subjectId !== undefined,
+  });
+}
+
+export function useSetSubjectImage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      subjectId,
+      blob,
+    }: {
+      subjectId: SubjectId;
+      blob: ExternalBlob;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.setSubjectImage(subjectId, blob);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subjectImage", vars.subjectId.toString()],
+      }),
+  });
+}
+
+// ── SubTopics ──────────────────────────────────────────────────────────────────
+
+export function useSubTopics(topicId: TopicId | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<SubTopic[]>({
+    queryKey: ["subTopics", topicId?.toString()],
+    queryFn: async () => {
+      if (!actor || topicId === undefined) return [];
+      return actor.listSubTopicsForTopic(topicId);
+    },
+    enabled: !!actor && !isFetching && topicId !== undefined,
+  });
+}
+
+export function useAddSubTopic() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      topicId,
+      heading,
+      notes,
+    }: {
+      topicId: TopicId;
+      heading: string;
+      notes?: string;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.addSubTopic(topicId, heading, notes ?? "");
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subTopics", vars.topicId.toString()],
+      }),
+  });
+}
+
+export function useUpdateSubTopicNotes() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      subTopicId,
+      notes,
+    }: {
+      subTopicId: SubTopicId;
+      notes: string;
+      topicId: TopicId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.updateSubTopicNotes(subTopicId, notes);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subTopics", vars.topicId.toString()],
+      }),
+  });
+}
+
+export function useRemoveSubTopic() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      subTopicId,
+    }: {
+      subTopicId: SubTopicId;
+      topicId: TopicId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.removeSubTopic(subTopicId);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["subTopics", vars.topicId.toString()],
+      }),
+  });
+}
+
+// ── Past Papers ────────────────────────────────────────────────────────────────
+
+export function usePastPapers(subjectId: SubjectId | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<PastPaper[]>({
+    queryKey: ["pastPapers", subjectId?.toString()],
+    queryFn: async () => {
+      if (!actor || subjectId === undefined) return [];
+      return actor.listPastPapersForSubject(subjectId);
+    },
+    enabled: !!actor && !isFetching && subjectId !== undefined,
+  });
+}
+
+export function useAddPastPaper() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      subjectId,
+      title,
+      year,
+      notes,
+    }: {
+      subjectId: SubjectId;
+      title: string;
+      year: bigint | null;
+      notes: string;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.addPastPaper(subjectId, title, year, notes);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["pastPapers", vars.subjectId.toString()],
+      }),
+  });
+}
+
+export function useRemovePastPaper() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      pastPaperId,
+    }: {
+      pastPaperId: PastPaperId;
+      subjectId: SubjectId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.removePastPaper(pastPaperId);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["pastPapers", vars.subjectId.toString()],
+      }),
+  });
+}
+
+export function useUpdatePastPaperNotes() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      pastPaperId,
+      notes,
+    }: {
+      pastPaperId: PastPaperId;
+      notes: string;
+      subjectId: SubjectId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.updatePastPaperNotes(pastPaperId, notes);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["pastPapers", vars.subjectId.toString()],
+      }),
   });
 }

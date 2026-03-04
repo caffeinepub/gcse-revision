@@ -1,29 +1,21 @@
 import Map "mo:core/Map";
+import Nat "mo:core/Nat";
+import Storage "blob-storage/Storage";
+import MixinStorage "blob-storage/Mixin";
 import Array "mo:core/Array";
-import Iter "mo:core/Iter";
-import Runtime "mo:core/Runtime";
-import Text "mo:core/Text";
-import Order "mo:core/Order";
 
 actor {
+  include MixinStorage();
+
   type SubjectId = Nat;
   type TopicId = Nat;
+  type SubTopicId = Nat;
+  type PastPaperId = Nat;
 
   type Subject = {
     id : SubjectId;
     name : Text;
-  };
-
-  module Subject {
-    public func compare(subject1 : Subject, subject2 : Subject) : Order.Order {
-      compareById(subject1, subject2);
-    };
-    public func compareById(subject1 : Subject, subject2 : Subject) : Order.Order {
-      Nat.compare(subject1.id, subject2.id);
-    };
-    public func compareByName(subject1 : Subject, subject2 : Subject) : Order.Order {
-      Text.compare(subject1.name, subject2.name);
-    };
+    image : ?Storage.ExternalBlob;
   };
 
   type Topic = {
@@ -33,86 +25,169 @@ actor {
     notes : Text;
   };
 
-  module Topic {
-    public func compare(topic1 : Topic, topic2 : Topic) : Order.Order {
-      compareById(topic1, topic2);
-    };
-    public func compareById(topic1 : Topic, topic2 : Topic) : Order.Order {
-      Nat.compare(topic1.id, topic2.id);
-    };
-    public func compareByTitle(topic1 : Topic, topic2 : Topic) : Order.Order {
-      Text.compare(topic1.title, topic2.title);
-    };
+  type SubTopic = {
+    id : SubTopicId;
+    topicId : TopicId;
+    heading : Text;
+    notes : Text;
   };
 
-  var nextSubjectId = 4 : Nat;
-  var nextTopicId = 1 : Nat;
+  type PastPaper = {
+    id : PastPaperId;
+    subjectId : SubjectId;
+    title : Text;
+    year : ?Nat;
+    notes : Text;
+  };
+
+  var nextSubjectId = 1;
+  var nextTopicId = 1;
+  var nextSubTopicId = 1;
+  var nextPastPaperId = 1;
 
   let subjects = Map.empty<SubjectId, Subject>();
   let topics = Map.empty<TopicId, Topic>();
+  let subTopics = Map.empty<SubTopicId, SubTopic>();
+  let pastPapers = Map.empty<PastPaperId, PastPaper>();
 
-  // Pre-populate with initial subjects
-  subjects.add(1, { id = 1; name = "Maths" });
-  subjects.add(2, { id = 2; name = "English" });
-  subjects.add(3, { id = 3; name = "Biology" });
-
+  // Subject Management
   public shared ({ caller }) func addSubject(name : Text) : async SubjectId {
     let subject : Subject = {
       id = nextSubjectId;
       name;
+      image = null;
     };
     subjects.add(nextSubjectId, subject);
 
     nextSubjectId += 1;
-
     subject.id;
   };
 
+  public shared ({ caller }) func setSubjectImage(subjectId : SubjectId, blob : Storage.ExternalBlob) : async () {
+    switch (subjects.get(subjectId)) {
+      case (null) { () };
+      case (?subject) {
+        let updatedSubject = { subject with image = ?blob };
+        subjects.add(subjectId, updatedSubject);
+      };
+    };
+  };
+
+  public query ({ caller }) func getSubjectImage(subjectId : SubjectId) : async ?Storage.ExternalBlob {
+    switch (subjects.get(subjectId)) {
+      case (null) { null };
+      case (?subject) { subject.image };
+    };
+  };
+
   public query ({ caller }) func listSubjects() : async [Subject] {
-    subjects.values().toArray().sort();
+    let entries = subjects.toArray();
+    entries.map(func((id, subject)) { subject });
   };
 
   public shared ({ caller }) func removeSubject(subjectId : SubjectId) : async () {
-    switch (subjects.get(subjectId)) {
-      case (null) { Runtime.trap("Subject with id " # subjectId.toText() # " does not exist.") };
-      case (?_subject) { subjects.remove(subjectId) };
-    };
+    subjects.remove(subjectId);
   };
 
+  // Topic Management
   public shared ({ caller }) func addTopic(subjectId : SubjectId, title : Text, notes : Text) : async TopicId {
-    switch (subjects.get(subjectId)) {
-      case (null) { Runtime.trap("Subject with id " # subjectId.toText() # " does not exist.") };
-      case (?_subject) {
-        let topic : Topic = {
-          id = nextTopicId;
-          subjectId;
-          title;
-          notes;
-        };
-        topics.add(nextTopicId, topic);
-
-        nextTopicId += 1;
-
-        topic.id;
-      };
+    if (not subjects.containsKey(subjectId)) {
+      return nextTopicId;
     };
+
+    let topic : Topic = {
+      id = nextTopicId;
+      subjectId;
+      title;
+      notes;
+    };
+    topics.add(nextTopicId, topic);
+
+    nextTopicId += 1;
+    topic.id;
   };
 
   public query ({ caller }) func listTopicsForSubject(subjectId : SubjectId) : async [Topic] {
-    switch (subjects.get(subjectId)) {
-      case (null) { Runtime.trap("Subject with id " # subjectId.toText() # " does not exist.") };
-      case (?_subject) {
-        topics.values().toArray().filter(
-          func(topic) { topic.subjectId == subjectId }
-        ).sort();
+    let allTopics = topics.toArray();
+    allTopics.map(func((id, topic)) { topic });
+  };
+
+  public shared ({ caller }) func removeTopic(topicId : TopicId) : async () {
+    topics.remove(topicId);
+  };
+
+  // SubTopic Management
+  public shared ({ caller }) func addSubTopic(topicId : TopicId, heading : Text, notes : Text) : async SubTopicId {
+    if (not topics.containsKey(topicId)) {
+      return nextSubTopicId;
+    };
+
+    let subTopic : SubTopic = {
+      id = nextSubTopicId;
+      topicId;
+      heading;
+      notes;
+    };
+    subTopics.add(nextSubTopicId, subTopic);
+
+    nextSubTopicId += 1;
+    subTopic.id;
+  };
+
+  public shared ({ caller }) func updateSubTopicNotes(subTopicId : SubTopicId, notes : Text) : async () {
+    switch (subTopics.get(subTopicId)) {
+      case (null) { () };
+      case (?subTopic) {
+        let updatedSubTopic = { subTopic with notes };
+        subTopics.add(subTopicId, updatedSubTopic);
       };
     };
   };
 
-  public shared ({ caller }) func removeTopic(topicId : TopicId) : async () {
-    switch (topics.get(topicId)) {
-      case (null) { Runtime.trap("Topic with id " # topicId.toText() # " does not exist.") };
-      case (?_topic) { topics.remove(topicId) };
+  public query ({ caller }) func listSubTopicsForTopic(topicId : TopicId) : async [SubTopic] {
+    let allSubTopics = subTopics.toArray();
+    allSubTopics.map(func((id, subTopic)) { subTopic });
+  };
+
+  public shared ({ caller }) func removeSubTopic(subTopicId : SubTopicId) : async () {
+    subTopics.remove(subTopicId);
+  };
+
+  // Past Paper Management
+  public shared ({ caller }) func addPastPaper(subjectId : SubjectId, title : Text, year : ?Nat, notes : Text) : async PastPaperId {
+    if (not subjects.containsKey(subjectId)) {
+      return nextPastPaperId;
+    };
+
+    let pastPaper : PastPaper = {
+      id = nextPastPaperId;
+      subjectId;
+      title;
+      year;
+      notes;
+    };
+    pastPapers.add(nextPastPaperId, pastPaper);
+
+    nextPastPaperId += 1;
+    pastPaper.id;
+  };
+
+  public query ({ caller }) func listPastPapersForSubject(subjectId : SubjectId) : async [PastPaper] {
+    let allPapers = pastPapers.toArray();
+    allPapers.map(func((id, pastPaper)) { pastPaper });
+  };
+
+  public shared ({ caller }) func removePastPaper(pastPaperId : PastPaperId) : async () {
+    pastPapers.remove(pastPaperId);
+  };
+
+  public shared ({ caller }) func updatePastPaperNotes(pastPaperId : PastPaperId, notes : Text) : async () {
+    switch (pastPapers.get(pastPaperId)) {
+      case (null) { () };
+      case (?pastPaper) {
+        let updatedPastPaper = { pastPaper with notes };
+        pastPapers.add(pastPaperId, updatedPastPaper);
+      };
     };
   };
 };

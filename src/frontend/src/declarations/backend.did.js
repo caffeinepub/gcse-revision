@@ -8,9 +8,40 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  'method' : IDL.Text,
+  'blob_hash' : IDL.Text,
+});
+export const _CaffeineStorageRefillInformation = IDL.Record({
+  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const _CaffeineStorageRefillResult = IDL.Record({
+  'success' : IDL.Opt(IDL.Bool),
+  'topped_up_amount' : IDL.Opt(IDL.Nat),
+});
 export const SubjectId = IDL.Nat;
+export const PastPaperId = IDL.Nat;
 export const TopicId = IDL.Nat;
-export const Subject = IDL.Record({ 'id' : SubjectId, 'name' : IDL.Text });
+export const SubTopicId = IDL.Nat;
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const PastPaper = IDL.Record({
+  'id' : PastPaperId,
+  'title' : IDL.Text,
+  'year' : IDL.Opt(IDL.Nat),
+  'subjectId' : SubjectId,
+  'notes' : IDL.Text,
+});
+export const SubTopic = IDL.Record({
+  'id' : SubTopicId,
+  'heading' : IDL.Text,
+  'notes' : IDL.Text,
+  'topicId' : TopicId,
+});
+export const Subject = IDL.Record({
+  'id' : SubjectId,
+  'name' : IDL.Text,
+  'image' : IDL.Opt(ExternalBlob),
+});
 export const Topic = IDL.Record({
   'id' : TopicId,
   'title' : IDL.Text,
@@ -19,20 +50,95 @@ export const Topic = IDL.Record({
 });
 
 export const idlService = IDL.Service({
+  '_caffeineStorageBlobIsLive' : IDL.Func(
+      [IDL.Vec(IDL.Nat8)],
+      [IDL.Bool],
+      ['query'],
+    ),
+  '_caffeineStorageBlobsToDelete' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [],
+      [],
+    ),
+  '_caffeineStorageCreateCertificate' : IDL.Func(
+      [IDL.Text],
+      [_CaffeineStorageCreateCertificateResult],
+      [],
+    ),
+  '_caffeineStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_CaffeineStorageRefillInformation)],
+      [_CaffeineStorageRefillResult],
+      [],
+    ),
+  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  'addPastPaper' : IDL.Func(
+      [SubjectId, IDL.Text, IDL.Opt(IDL.Nat), IDL.Text],
+      [PastPaperId],
+      [],
+    ),
+  'addSubTopic' : IDL.Func([TopicId, IDL.Text, IDL.Text], [SubTopicId], []),
   'addSubject' : IDL.Func([IDL.Text], [SubjectId], []),
   'addTopic' : IDL.Func([SubjectId, IDL.Text, IDL.Text], [TopicId], []),
+  'getSubjectImage' : IDL.Func([SubjectId], [IDL.Opt(ExternalBlob)], ['query']),
+  'listPastPapersForSubject' : IDL.Func(
+      [SubjectId],
+      [IDL.Vec(PastPaper)],
+      ['query'],
+    ),
+  'listSubTopicsForTopic' : IDL.Func([TopicId], [IDL.Vec(SubTopic)], ['query']),
   'listSubjects' : IDL.Func([], [IDL.Vec(Subject)], ['query']),
   'listTopicsForSubject' : IDL.Func([SubjectId], [IDL.Vec(Topic)], ['query']),
+  'removePastPaper' : IDL.Func([PastPaperId], [], []),
+  'removeSubTopic' : IDL.Func([SubTopicId], [], []),
   'removeSubject' : IDL.Func([SubjectId], [], []),
   'removeTopic' : IDL.Func([TopicId], [], []),
+  'setSubjectImage' : IDL.Func([SubjectId, ExternalBlob], [], []),
+  'updatePastPaperNotes' : IDL.Func([PastPaperId, IDL.Text], [], []),
+  'updateSubTopicNotes' : IDL.Func([SubTopicId, IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
+  const _CaffeineStorageRefillInformation = IDL.Record({
+    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const _CaffeineStorageRefillResult = IDL.Record({
+    'success' : IDL.Opt(IDL.Bool),
+    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  });
   const SubjectId = IDL.Nat;
+  const PastPaperId = IDL.Nat;
   const TopicId = IDL.Nat;
-  const Subject = IDL.Record({ 'id' : SubjectId, 'name' : IDL.Text });
+  const SubTopicId = IDL.Nat;
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const PastPaper = IDL.Record({
+    'id' : PastPaperId,
+    'title' : IDL.Text,
+    'year' : IDL.Opt(IDL.Nat),
+    'subjectId' : SubjectId,
+    'notes' : IDL.Text,
+  });
+  const SubTopic = IDL.Record({
+    'id' : SubTopicId,
+    'heading' : IDL.Text,
+    'notes' : IDL.Text,
+    'topicId' : TopicId,
+  });
+  const Subject = IDL.Record({
+    'id' : SubjectId,
+    'name' : IDL.Text,
+    'image' : IDL.Opt(ExternalBlob),
+  });
   const Topic = IDL.Record({
     'id' : TopicId,
     'title' : IDL.Text,
@@ -41,12 +147,64 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
+    '_caffeineStorageBlobIsLive' : IDL.Func(
+        [IDL.Vec(IDL.Nat8)],
+        [IDL.Bool],
+        ['query'],
+      ),
+    '_caffeineStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_caffeineStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [_CaffeineStorageCreateCertificateResult],
+        [],
+      ),
+    '_caffeineStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_CaffeineStorageRefillInformation)],
+        [_CaffeineStorageRefillResult],
+        [],
+      ),
+    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    'addPastPaper' : IDL.Func(
+        [SubjectId, IDL.Text, IDL.Opt(IDL.Nat), IDL.Text],
+        [PastPaperId],
+        [],
+      ),
+    'addSubTopic' : IDL.Func([TopicId, IDL.Text, IDL.Text], [SubTopicId], []),
     'addSubject' : IDL.Func([IDL.Text], [SubjectId], []),
     'addTopic' : IDL.Func([SubjectId, IDL.Text, IDL.Text], [TopicId], []),
+    'getSubjectImage' : IDL.Func(
+        [SubjectId],
+        [IDL.Opt(ExternalBlob)],
+        ['query'],
+      ),
+    'listPastPapersForSubject' : IDL.Func(
+        [SubjectId],
+        [IDL.Vec(PastPaper)],
+        ['query'],
+      ),
+    'listSubTopicsForTopic' : IDL.Func(
+        [TopicId],
+        [IDL.Vec(SubTopic)],
+        ['query'],
+      ),
     'listSubjects' : IDL.Func([], [IDL.Vec(Subject)], ['query']),
     'listTopicsForSubject' : IDL.Func([SubjectId], [IDL.Vec(Topic)], ['query']),
+    'removePastPaper' : IDL.Func([PastPaperId], [], []),
+    'removeSubTopic' : IDL.Func([SubTopicId], [], []),
     'removeSubject' : IDL.Func([SubjectId], [], []),
     'removeTopic' : IDL.Func([TopicId], [], []),
+    'setSubjectImage' : IDL.Func([SubjectId, ExternalBlob], [], []),
+    'updatePastPaperNotes' : IDL.Func([PastPaperId, IDL.Text], [], []),
+    'updateSubTopicNotes' : IDL.Func([SubTopicId, IDL.Text], [], []),
   });
 };
 

@@ -89,28 +89,184 @@ export class ExternalBlob {
         return this;
     }
 }
+export type TopicId = bigint;
+export interface PastPaper {
+    id: PastPaperId;
+    title: string;
+    year?: bigint;
+    subjectId: SubjectId;
+    notes: string;
+}
+export interface _CaffeineStorageRefillInformation {
+    proposed_top_up_amount?: bigint;
+}
+export type SubTopicId = bigint;
 export interface Topic {
     id: TopicId;
     title: string;
     subjectId: SubjectId;
     notes: string;
 }
-export type TopicId = bigint;
-export type SubjectId = bigint;
+export interface SubTopic {
+    id: SubTopicId;
+    heading: string;
+    notes: string;
+    topicId: TopicId;
+}
+export type PastPaperId = bigint;
+export interface _CaffeineStorageCreateCertificateResult {
+    method: string;
+    blob_hash: string;
+}
 export interface Subject {
     id: SubjectId;
     name: string;
+    image?: ExternalBlob;
+}
+export type SubjectId = bigint;
+export interface _CaffeineStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
 }
 export interface backendInterface {
+    _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
+    _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
+    _caffeineStorageConfirmBlobDeletion(blobs: Array<Uint8Array>): Promise<void>;
+    _caffeineStorageCreateCertificate(blobHash: string): Promise<_CaffeineStorageCreateCertificateResult>;
+    _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
+    _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
+    addPastPaper(subjectId: SubjectId, title: string, year: bigint | null, notes: string): Promise<PastPaperId>;
+    addSubTopic(topicId: TopicId, heading: string, notes: string): Promise<SubTopicId>;
     addSubject(name: string): Promise<SubjectId>;
     addTopic(subjectId: SubjectId, title: string, notes: string): Promise<TopicId>;
+    getSubjectImage(subjectId: SubjectId): Promise<ExternalBlob | null>;
+    listPastPapersForSubject(subjectId: SubjectId): Promise<Array<PastPaper>>;
+    listSubTopicsForTopic(topicId: TopicId): Promise<Array<SubTopic>>;
     listSubjects(): Promise<Array<Subject>>;
     listTopicsForSubject(subjectId: SubjectId): Promise<Array<Topic>>;
+    removePastPaper(pastPaperId: PastPaperId): Promise<void>;
+    removeSubTopic(subTopicId: SubTopicId): Promise<void>;
     removeSubject(subjectId: SubjectId): Promise<void>;
     removeTopic(topicId: TopicId): Promise<void>;
+    setSubjectImage(subjectId: SubjectId, blob: ExternalBlob): Promise<void>;
+    updatePastPaperNotes(pastPaperId: PastPaperId, notes: string): Promise<void>;
+    updateSubTopicNotes(subTopicId: SubTopicId, notes: string): Promise<void>;
 }
+import type { ExternalBlob as _ExternalBlob, PastPaper as _PastPaper, PastPaperId as _PastPaperId, Subject as _Subject, SubjectId as _SubjectId, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
+    async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageBlobsToDelete();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageBlobsToDelete();
+            return result;
+        }
+    }
+    async _caffeineStorageConfirmBlobDeletion(arg0: Array<Uint8Array>): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageCreateCertificate(arg0: string): Promise<_CaffeineStorageCreateCertificateResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+            return result;
+        }
+    }
+    async _caffeineStorageRefillCashier(arg0: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+                return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+            return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async _caffeineStorageUpdateGatewayPrincipals(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+            return result;
+        }
+    }
+    async addPastPaper(arg0: SubjectId, arg1: string, arg2: bigint | null, arg3: string): Promise<PastPaperId> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addPastPaper(arg0, arg1, to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2), arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addPastPaper(arg0, arg1, to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2), arg3);
+            return result;
+        }
+    }
+    async addSubTopic(arg0: TopicId, arg1: string, arg2: string): Promise<SubTopicId> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addSubTopic(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addSubTopic(arg0, arg1, arg2);
+            return result;
+        }
+    }
     async addSubject(arg0: string): Promise<SubjectId> {
         if (this.processError) {
             try {
@@ -139,18 +295,60 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async listSubjects(): Promise<Array<Subject>> {
+    async getSubjectImage(arg0: SubjectId): Promise<ExternalBlob | null> {
         if (this.processError) {
             try {
-                const result = await this.actor.listSubjects();
+                const result = await this.actor.getSubjectImage(arg0);
+                return from_candid_opt_n9(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSubjectImage(arg0);
+            return from_candid_opt_n9(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async listPastPapersForSubject(arg0: SubjectId): Promise<Array<PastPaper>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listPastPapersForSubject(arg0);
+                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listPastPapersForSubject(arg0);
+            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async listSubTopicsForTopic(arg0: TopicId): Promise<Array<SubTopic>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listSubTopicsForTopic(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.listSubjects();
+            const result = await this.actor.listSubTopicsForTopic(arg0);
             return result;
+        }
+    }
+    async listSubjects(): Promise<Array<Subject>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listSubjects();
+                return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listSubjects();
+            return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async listTopicsForSubject(arg0: SubjectId): Promise<Array<Topic>> {
@@ -164,6 +362,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.listTopicsForSubject(arg0);
+            return result;
+        }
+    }
+    async removePastPaper(arg0: PastPaperId): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removePastPaper(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removePastPaper(arg0);
+            return result;
+        }
+    }
+    async removeSubTopic(arg0: SubTopicId): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeSubTopic(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeSubTopic(arg0);
             return result;
         }
     }
@@ -195,6 +421,144 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async setSubjectImage(arg0: SubjectId, arg1: ExternalBlob): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setSubjectImage(arg0, await to_candid_ExternalBlob_n17(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setSubjectImage(arg0, await to_candid_ExternalBlob_n17(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async updatePastPaperNotes(arg0: PastPaperId, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updatePastPaperNotes(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updatePastPaperNotes(arg0, arg1);
+            return result;
+        }
+    }
+    async updateSubTopicNotes(arg0: SubTopicId, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateSubTopicNotes(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateSubTopicNotes(arg0, arg1);
+            return result;
+        }
+    }
+}
+async function from_candid_ExternalBlob_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
+    return await _downloadFile(value);
+}
+function from_candid_PastPaper_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PastPaper): PastPaper {
+    return from_candid_record_n13(_uploadFile, _downloadFile, value);
+}
+async function from_candid_Subject_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Subject): Promise<Subject> {
+    return await from_candid_record_n16(_uploadFile, _downloadFile, value);
+}
+function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
+    return from_candid_record_n5(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
+    return value.length === 0 ? null : value[0];
+}
+async function from_candid_opt_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExternalBlob]): Promise<ExternalBlob | null> {
+    return value.length === 0 ? null : await from_candid_ExternalBlob_n10(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _PastPaperId;
+    title: string;
+    year: [] | [bigint];
+    subjectId: _SubjectId;
+    notes: string;
+}): {
+    id: PastPaperId;
+    title: string;
+    year?: bigint;
+    subjectId: SubjectId;
+    notes: string;
+} {
+    return {
+        id: value.id,
+        title: value.title,
+        year: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.year)),
+        subjectId: value.subjectId,
+        notes: value.notes
+    };
+}
+async function from_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: _SubjectId;
+    name: string;
+    image: [] | [_ExternalBlob];
+}): Promise<{
+    id: SubjectId;
+    name: string;
+    image?: ExternalBlob;
+}> {
+    return {
+        id: value.id,
+        name: value.name,
+        image: record_opt_to_undefined(await from_candid_opt_n9(_uploadFile, _downloadFile, value.image))
+    };
+}
+function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    success: [] | [boolean];
+    topped_up_amount: [] | [bigint];
+}): {
+    success?: boolean;
+    topped_up_amount?: bigint;
+} {
+    return {
+        success: record_opt_to_undefined(from_candid_opt_n6(_uploadFile, _downloadFile, value.success)),
+        topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
+    };
+}
+function from_candid_vec_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_PastPaper>): Array<PastPaper> {
+    return value.map((x)=>from_candid_PastPaper_n12(_uploadFile, _downloadFile, x));
+}
+async function from_candid_vec_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Subject>): Promise<Array<Subject>> {
+    return await Promise.all(value.map(async (x)=>await from_candid_Subject_n15(_uploadFile, _downloadFile, x)));
+}
+async function to_candid_ExternalBlob_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
+    return await _uploadFile(value);
+}
+function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation): __CaffeineStorageRefillInformation {
+    return to_candid_record_n3(_uploadFile, _downloadFile, value);
+}
+function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
+    return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
+}
+function to_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: bigint | null): [] | [bigint] {
+    return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    proposed_top_up_amount?: bigint;
+}): {
+    proposed_top_up_amount: [] | [bigint];
+} {
+    return {
+        proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
+    };
 }
 export interface CreateActorOptions {
     agent?: Agent;
