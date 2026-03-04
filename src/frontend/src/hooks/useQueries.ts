@@ -9,6 +9,8 @@ import type {
   SubjectId,
   Topic,
   TopicId,
+  TopicImage,
+  TopicImageId,
 } from "../backend.d";
 import { useActor } from "./useActor";
 
@@ -294,6 +296,61 @@ export function useUpdatePastPaperNotes() {
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({
         queryKey: ["pastPapers", vars.subjectId.toString()],
+      }),
+  });
+}
+
+// ── Topic Images ───────────────────────────────────────────────────────────────
+
+export function useTopicImages(topicId: TopicId | undefined) {
+  const { actor, isFetching } = useActor();
+  return useQuery<TopicImage[]>({
+    queryKey: ["topicImages", topicId?.toString()],
+    queryFn: async () => {
+      if (!actor || topicId === undefined) return [];
+      return actor.listTopicImages(topicId);
+    },
+    enabled: !!actor && !isFetching && topicId !== undefined,
+  });
+}
+
+export function useAddTopicImage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      topicId,
+      blob,
+    }: {
+      topicId: TopicId;
+      blob: ExternalBlob;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.addTopicImage(topicId, blob);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["topicImages", vars.topicId.toString()],
+      }),
+  });
+}
+
+export function useRemoveTopicImage() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      topicImageId,
+    }: {
+      topicImageId: TopicImageId;
+      topicId: TopicId;
+    }) => {
+      if (!actor) throw new Error("No actor");
+      return actor.removeTopicImage(topicImageId);
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({
+        queryKey: ["topicImages", vars.topicId.toString()],
       }),
   });
 }

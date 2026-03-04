@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Circle,
   Download,
   FileText,
@@ -32,6 +34,7 @@ import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
 import PastPaperList from "../components/PastPaperList";
 import SubTopicList from "../components/SubTopicList";
+import TopicImageStrip from "../components/TopicImageStrip";
 import { useLearnedTopics } from "../hooks/useLearnedTopics";
 import {
   useAddTopic,
@@ -71,6 +74,23 @@ export default function SubjectPage() {
   const [notes, setNotes] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
   const topicsRef = useRef<HTMLDivElement>(null);
+
+  // Collapsible topics state
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(topicId: bigint) {
+    setExpandedTopics((prev) => {
+      const next = new Set(prev);
+      const key = topicId.toString();
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function isExpanded(topicId: bigint) {
+    return expandedTopics.has(topicId.toString());
+  }
 
   // Image upload state
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -711,10 +731,32 @@ export default function SubjectPage() {
                       )}
 
                       <div className="pl-3">
-                        <div className="flex items-start justify-between gap-2">
+                        {/* Clickable header row — collapses/expands the body */}
+                        <button
+                          type="button"
+                          data-ocid={`topic.toggle.${ocidIdx}`}
+                          onClick={() => toggleExpanded(topic.id)}
+                          aria-expanded={isExpanded(topic.id)}
+                          aria-label={
+                            isExpanded(topic.id)
+                              ? `Collapse topic ${topic.title}`
+                              : `Expand topic ${topic.title}`
+                          }
+                          className="w-full flex items-center gap-2 text-left cursor-pointer rounded-lg px-0 py-1 -mx-0 hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                        >
+                          <span
+                            className="flex-shrink-0 text-muted-foreground transition-transform duration-200"
+                            aria-hidden="true"
+                          >
+                            {isExpanded(topic.id) ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </span>
                           <h3
                             className={[
-                              "font-display font-bold text-foreground text-base leading-snug transition-all duration-200",
+                              "font-display font-bold text-foreground text-base leading-snug transition-all duration-200 flex-1 min-w-0",
                               isLearned(topic.id)
                                 ? "line-through text-muted-foreground"
                                 : "",
@@ -722,64 +764,98 @@ export default function SubjectPage() {
                           >
                             {topic.title}
                           </h3>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {/* Mark as learned toggle */}
-                            <button
-                              type="button"
-                              data-ocid={`topic.learned_toggle.${ocidIdx}`}
-                              onClick={() => toggleLearned(topic.id)}
-                              aria-label={
-                                isLearned(topic.id)
-                                  ? `Mark "${topic.title}" as not learned`
-                                  : `Mark "${topic.title}" as learned`
-                              }
-                              aria-pressed={isLearned(topic.id)}
-                              className={[
-                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                isLearned(topic.id)
-                                  ? "bg-success/20 border-success/40 text-success hover:bg-success/30"
-                                  : "bg-transparent border-border text-muted-foreground hover:border-success/50 hover:text-success hover:bg-success/10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-                              ].join(" ")}
-                            >
-                              {isLearned(topic.id) ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <Circle className="w-3.5 h-3.5" />
-                              )}
-                              {isLearned(topic.id)
-                                ? "Learned"
-                                : "Mark as learned"}
-                            </button>
-                            {/* Delete button */}
-                            <button
-                              type="button"
-                              data-ocid={`topic.delete_button.${ocidIdx}`}
-                              onClick={() =>
-                                handleRemoveTopic(topic.id, topic.title)
-                              }
-                              disabled={removeTopic.isPending}
-                              aria-label={`Remove topic ${topic.title}`}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              {removeTopic.isPending ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
+                          {/* Learned badge — always visible in header when learned */}
+                          {isLearned(topic.id) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-body font-medium bg-success/20 border border-success/40 text-success flex-shrink-0">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Learned
+                            </span>
+                          )}
+                        </button>
 
-                        {topic.notes && (
-                          <p className="text-sm font-body text-muted-foreground mt-1.5 leading-relaxed whitespace-pre-wrap">
-                            {topic.notes}
-                          </p>
-                        )}
+                        {/* Expandable body */}
+                        <AnimatePresence initial={false}>
+                          {isExpanded(topic.id) && (
+                            <motion.div
+                              key="body"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25, ease: "easeInOut" }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div className="mt-2 space-y-3">
+                                {topic.notes && (
+                                  <p className="text-sm font-body text-muted-foreground leading-relaxed whitespace-pre-wrap pl-6">
+                                    {topic.notes}
+                                  </p>
+                                )}
 
-                        <SubTopicList
-                          topicId={topic.id}
-                          accentColor={color?.bg}
-                        />
+                                <div className="pl-6">
+                                  <TopicImageStrip
+                                    topicId={topic.id}
+                                    accentColor={color?.bg}
+                                  />
+                                </div>
+
+                                <div className="pl-6">
+                                  <SubTopicList
+                                    topicId={topic.id}
+                                    accentColor={color?.bg}
+                                  />
+                                </div>
+
+                                {/* Action buttons inside expanded body */}
+                                <div className="flex items-center gap-2 pl-6 pt-1">
+                                  {/* Mark as learned toggle */}
+                                  <button
+                                    type="button"
+                                    data-ocid={`topic.learned_toggle.${ocidIdx}`}
+                                    onClick={() => toggleLearned(topic.id)}
+                                    aria-label={
+                                      isLearned(topic.id)
+                                        ? `Mark "${topic.title}" as not learned`
+                                        : `Mark "${topic.title}" as learned`
+                                    }
+                                    aria-pressed={isLearned(topic.id)}
+                                    className={[
+                                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-body font-medium transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                      isLearned(topic.id)
+                                        ? "bg-success/20 border-success/40 text-success hover:bg-success/30"
+                                        : "bg-transparent border-border text-muted-foreground hover:border-success/50 hover:text-success hover:bg-success/10",
+                                    ].join(" ")}
+                                  >
+                                    {isLearned(topic.id) ? (
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <Circle className="w-3.5 h-3.5" />
+                                    )}
+                                    {isLearned(topic.id)
+                                      ? "Learned"
+                                      : "Mark as learned"}
+                                  </button>
+                                  {/* Delete button */}
+                                  <button
+                                    type="button"
+                                    data-ocid={`topic.delete_button.${ocidIdx}`}
+                                    onClick={() =>
+                                      handleRemoveTopic(topic.id, topic.title)
+                                    }
+                                    disabled={removeTopic.isPending}
+                                    aria-label={`Remove topic ${topic.title}`}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                                  >
+                                    {removeTopic.isPending ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </motion.div>
                   );

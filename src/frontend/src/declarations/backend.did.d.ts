@@ -39,6 +39,12 @@ export interface Topic {
   'notes' : string,
 }
 export type TopicId = bigint;
+export interface TopicImage {
+  'id' : TopicImageId,
+  'blob' : ExternalBlob,
+  'topicId' : TopicId,
+}
+export type TopicImageId = bigint;
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -73,15 +79,18 @@ export interface _SERVICE {
   'addSubTopic' : ActorMethod<[TopicId, string, string], SubTopicId>,
   'addSubject' : ActorMethod<[string], SubjectId>,
   'addTopic' : ActorMethod<[SubjectId, string, string], TopicId>,
+  'addTopicImage' : ActorMethod<[TopicId, ExternalBlob], TopicImageId>,
   'getSubjectImage' : ActorMethod<[SubjectId], [] | [ExternalBlob]>,
   'listPastPapersForSubject' : ActorMethod<[SubjectId], Array<PastPaper>>,
   'listSubTopicsForTopic' : ActorMethod<[TopicId], Array<SubTopic>>,
   'listSubjects' : ActorMethod<[], Array<Subject>>,
+  'listTopicImages' : ActorMethod<[TopicId], Array<TopicImage>>,
   'listTopicsForSubject' : ActorMethod<[SubjectId], Array<Topic>>,
   'removePastPaper' : ActorMethod<[PastPaperId], undefined>,
   'removeSubTopic' : ActorMethod<[SubTopicId], undefined>,
   'removeSubject' : ActorMethod<[SubjectId], undefined>,
   'removeTopic' : ActorMethod<[TopicId], undefined>,
+  'removeTopicImage' : ActorMethod<[TopicImageId], undefined>,
   'setSubjectImage' : ActorMethod<[SubjectId, ExternalBlob], undefined>,
   'updatePastPaperNotes' : ActorMethod<[PastPaperId, string], undefined>,
   'updateSubTopicNotes' : ActorMethod<[SubTopicId, string], undefined>,

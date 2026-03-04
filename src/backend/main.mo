@@ -1,9 +1,10 @@
-import Map "mo:core/Map";
-import Nat "mo:core/Nat";
 import Storage "blob-storage/Storage";
 import MixinStorage "blob-storage/Mixin";
 import Array "mo:core/Array";
+import Nat "mo:core/Nat";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   include MixinStorage();
 
@@ -11,28 +12,29 @@ actor {
   type TopicId = Nat;
   type SubTopicId = Nat;
   type PastPaperId = Nat;
+  type TopicImageId = Nat;
 
-  type Subject = {
+  public type Subject = {
     id : SubjectId;
     name : Text;
     image : ?Storage.ExternalBlob;
   };
 
-  type Topic = {
+  public type Topic = {
     id : TopicId;
     subjectId : SubjectId;
     title : Text;
     notes : Text;
   };
 
-  type SubTopic = {
+  public type SubTopic = {
     id : SubTopicId;
     topicId : TopicId;
     heading : Text;
     notes : Text;
   };
 
-  type PastPaper = {
+  public type PastPaper = {
     id : PastPaperId;
     subjectId : SubjectId;
     title : Text;
@@ -40,15 +42,23 @@ actor {
     notes : Text;
   };
 
+  public type TopicImage = {
+    id : TopicImageId;
+    topicId : TopicId;
+    blob : Storage.ExternalBlob;
+  };
+
   var nextSubjectId = 1;
   var nextTopicId = 1;
   var nextSubTopicId = 1;
   var nextPastPaperId = 1;
+  var nextTopicImageId = 1;
 
-  let subjects = Map.empty<SubjectId, Subject>();
-  let topics = Map.empty<TopicId, Topic>();
-  let subTopics = Map.empty<SubTopicId, SubTopic>();
-  let pastPapers = Map.empty<PastPaperId, PastPaper>();
+  var subjectStore : [Subject] = [];
+  var topicStore : [Topic] = [];
+  var subTopicStore : [SubTopic] = [];
+  var pastPaperStore : [PastPaper] = [];
+  var topicImageStore : [TopicImage] = [];
 
   // Subject Management
   public shared ({ caller }) func addSubject(name : Text) : async SubjectId {
@@ -57,108 +67,100 @@ actor {
       name;
       image = null;
     };
-    subjects.add(nextSubjectId, subject);
-
+    subjectStore := subjectStore.concat([subject]);
     nextSubjectId += 1;
     subject.id;
   };
 
   public shared ({ caller }) func setSubjectImage(subjectId : SubjectId, blob : Storage.ExternalBlob) : async () {
-    switch (subjects.get(subjectId)) {
-      case (null) { () };
-      case (?subject) {
-        let updatedSubject = { subject with image = ?blob };
-        subjects.add(subjectId, updatedSubject);
-      };
-    };
+    subjectStore := subjectStore.map(
+      func(subject) {
+        if (subject.id == subjectId) {
+          { subject with image = ?blob };
+        } else {
+          subject;
+        };
+      }
+    );
   };
 
   public query ({ caller }) func getSubjectImage(subjectId : SubjectId) : async ?Storage.ExternalBlob {
-    switch (subjects.get(subjectId)) {
+    switch (subjectStore.find(func(subject) { subject.id == subjectId })) {
       case (null) { null };
       case (?subject) { subject.image };
     };
   };
 
   public query ({ caller }) func listSubjects() : async [Subject] {
-    let entries = subjects.toArray();
-    entries.map(func((id, subject)) { subject });
+    subjectStore;
   };
 
   public shared ({ caller }) func removeSubject(subjectId : SubjectId) : async () {
-    subjects.remove(subjectId);
+    subjectStore := subjectStore.filter(
+      func(subject) { subject.id != subjectId }
+    );
   };
 
   // Topic Management
   public shared ({ caller }) func addTopic(subjectId : SubjectId, title : Text, notes : Text) : async TopicId {
-    if (not subjects.containsKey(subjectId)) {
-      return nextTopicId;
-    };
-
     let topic : Topic = {
       id = nextTopicId;
       subjectId;
       title;
       notes;
     };
-    topics.add(nextTopicId, topic);
-
+    topicStore := topicStore.concat([topic]);
     nextTopicId += 1;
     topic.id;
   };
 
   public query ({ caller }) func listTopicsForSubject(subjectId : SubjectId) : async [Topic] {
-    let allTopics = topics.toArray();
-    allTopics.map(func((id, topic)) { topic });
+    topicStore.filter(func(topic) { topic.subjectId == subjectId });
   };
 
   public shared ({ caller }) func removeTopic(topicId : TopicId) : async () {
-    topics.remove(topicId);
+    topicStore := topicStore.filter(
+      func(topic) { topic.id != topicId }
+    );
   };
 
   // SubTopic Management
   public shared ({ caller }) func addSubTopic(topicId : TopicId, heading : Text, notes : Text) : async SubTopicId {
-    if (not topics.containsKey(topicId)) {
-      return nextSubTopicId;
-    };
-
     let subTopic : SubTopic = {
       id = nextSubTopicId;
       topicId;
       heading;
       notes;
     };
-    subTopics.add(nextSubTopicId, subTopic);
-
+    subTopicStore := subTopicStore.concat([subTopic]);
     nextSubTopicId += 1;
     subTopic.id;
   };
 
   public shared ({ caller }) func updateSubTopicNotes(subTopicId : SubTopicId, notes : Text) : async () {
-    switch (subTopics.get(subTopicId)) {
-      case (null) { () };
-      case (?subTopic) {
-        let updatedSubTopic = { subTopic with notes };
-        subTopics.add(subTopicId, updatedSubTopic);
-      };
-    };
+    subTopicStore := subTopicStore.map(
+      func(subTopic) {
+        if (subTopic.id == subTopicId) {
+          { subTopic with notes };
+        } else {
+          subTopic;
+        };
+      }
+    );
   };
 
   public query ({ caller }) func listSubTopicsForTopic(topicId : TopicId) : async [SubTopic] {
-    let allSubTopics = subTopics.toArray();
-    allSubTopics.map(func((id, subTopic)) { subTopic });
+    subTopicStore.filter(func(subTopic) { subTopic.topicId == topicId });
   };
 
   public shared ({ caller }) func removeSubTopic(subTopicId : SubTopicId) : async () {
-    subTopics.remove(subTopicId);
+    subTopicStore := subTopicStore.filter(
+      func(subTopic) { subTopic.id != subTopicId }
+    );
   };
 
   // Past Paper Management
   public shared ({ caller }) func addPastPaper(subjectId : SubjectId, title : Text, year : ?Nat, notes : Text) : async PastPaperId {
-    if (not subjects.containsKey(subjectId)) {
-      return nextPastPaperId;
-    };
-
     let pastPaper : PastPaper = {
       id = nextPastPaperId;
       subjectId;
@@ -166,28 +168,52 @@ actor {
       year;
       notes;
     };
-    pastPapers.add(nextPastPaperId, pastPaper);
-
+    pastPaperStore := pastPaperStore.concat([pastPaper]);
     nextPastPaperId += 1;
     pastPaper.id;
   };
 
   public query ({ caller }) func listPastPapersForSubject(subjectId : SubjectId) : async [PastPaper] {
-    let allPapers = pastPapers.toArray();
-    allPapers.map(func((id, pastPaper)) { pastPaper });
+    pastPaperStore.filter(func(paper) { paper.subjectId == subjectId });
   };
 
   public shared ({ caller }) func removePastPaper(pastPaperId : PastPaperId) : async () {
-    pastPapers.remove(pastPaperId);
+    pastPaperStore := pastPaperStore.filter(
+      func(paper) { paper.id != pastPaperId }
+    );
   };
 
   public shared ({ caller }) func updatePastPaperNotes(pastPaperId : PastPaperId, notes : Text) : async () {
-    switch (pastPapers.get(pastPaperId)) {
-      case (null) { () };
-      case (?pastPaper) {
-        let updatedPastPaper = { pastPaper with notes };
-        pastPapers.add(pastPaperId, updatedPastPaper);
-      };
+    pastPaperStore := pastPaperStore.map(
+      func(paper) {
+        if (paper.id == pastPaperId) {
+          { paper with notes };
+        } else {
+          paper;
+        };
+      }
+    );
+  };
+
+  // Topic Image Management
+  public shared ({ caller }) func addTopicImage(topicId : TopicId, blob : Storage.ExternalBlob) : async TopicImageId {
+    let topicImage : TopicImage = {
+      id = nextTopicImageId;
+      topicId;
+      blob;
     };
+    topicImageStore := topicImageStore.concat([topicImage]);
+    nextTopicImageId += 1;
+    topicImage.id;
+  };
+
+  public query ({ caller }) func listTopicImages(topicId : TopicId) : async [TopicImage] {
+    topicImageStore.filter(func(image) { image.topicId == topicId });
+  };
+
+  public shared ({ caller }) func removeTopicImage(topicImageId : TopicImageId) : async () {
+    topicImageStore := topicImageStore.filter(
+      func(image) { image.id != topicImageId }
+    );
   };
 };

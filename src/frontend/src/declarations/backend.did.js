@@ -24,6 +24,7 @@ export const PastPaperId = IDL.Nat;
 export const TopicId = IDL.Nat;
 export const SubTopicId = IDL.Nat;
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const TopicImageId = IDL.Nat;
 export const PastPaper = IDL.Record({
   'id' : PastPaperId,
   'title' : IDL.Text,
@@ -41,6 +42,11 @@ export const Subject = IDL.Record({
   'id' : SubjectId,
   'name' : IDL.Text,
   'image' : IDL.Opt(ExternalBlob),
+});
+export const TopicImage = IDL.Record({
+  'id' : TopicImageId,
+  'blob' : ExternalBlob,
+  'topicId' : TopicId,
 });
 export const Topic = IDL.Record({
   'id' : TopicId,
@@ -84,6 +90,7 @@ export const idlService = IDL.Service({
   'addSubTopic' : IDL.Func([TopicId, IDL.Text, IDL.Text], [SubTopicId], []),
   'addSubject' : IDL.Func([IDL.Text], [SubjectId], []),
   'addTopic' : IDL.Func([SubjectId, IDL.Text, IDL.Text], [TopicId], []),
+  'addTopicImage' : IDL.Func([TopicId, ExternalBlob], [TopicImageId], []),
   'getSubjectImage' : IDL.Func([SubjectId], [IDL.Opt(ExternalBlob)], ['query']),
   'listPastPapersForSubject' : IDL.Func(
       [SubjectId],
@@ -92,11 +99,13 @@ export const idlService = IDL.Service({
     ),
   'listSubTopicsForTopic' : IDL.Func([TopicId], [IDL.Vec(SubTopic)], ['query']),
   'listSubjects' : IDL.Func([], [IDL.Vec(Subject)], ['query']),
+  'listTopicImages' : IDL.Func([TopicId], [IDL.Vec(TopicImage)], ['query']),
   'listTopicsForSubject' : IDL.Func([SubjectId], [IDL.Vec(Topic)], ['query']),
   'removePastPaper' : IDL.Func([PastPaperId], [], []),
   'removeSubTopic' : IDL.Func([SubTopicId], [], []),
   'removeSubject' : IDL.Func([SubjectId], [], []),
   'removeTopic' : IDL.Func([TopicId], [], []),
+  'removeTopicImage' : IDL.Func([TopicImageId], [], []),
   'setSubjectImage' : IDL.Func([SubjectId, ExternalBlob], [], []),
   'updatePastPaperNotes' : IDL.Func([PastPaperId, IDL.Text], [], []),
   'updateSubTopicNotes' : IDL.Func([SubTopicId, IDL.Text], [], []),
@@ -121,6 +130,7 @@ export const idlFactory = ({ IDL }) => {
   const TopicId = IDL.Nat;
   const SubTopicId = IDL.Nat;
   const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const TopicImageId = IDL.Nat;
   const PastPaper = IDL.Record({
     'id' : PastPaperId,
     'title' : IDL.Text,
@@ -138,6 +148,11 @@ export const idlFactory = ({ IDL }) => {
     'id' : SubjectId,
     'name' : IDL.Text,
     'image' : IDL.Opt(ExternalBlob),
+  });
+  const TopicImage = IDL.Record({
+    'id' : TopicImageId,
+    'blob' : ExternalBlob,
+    'topicId' : TopicId,
   });
   const Topic = IDL.Record({
     'id' : TopicId,
@@ -181,6 +196,7 @@ export const idlFactory = ({ IDL }) => {
     'addSubTopic' : IDL.Func([TopicId, IDL.Text, IDL.Text], [SubTopicId], []),
     'addSubject' : IDL.Func([IDL.Text], [SubjectId], []),
     'addTopic' : IDL.Func([SubjectId, IDL.Text, IDL.Text], [TopicId], []),
+    'addTopicImage' : IDL.Func([TopicId, ExternalBlob], [TopicImageId], []),
     'getSubjectImage' : IDL.Func(
         [SubjectId],
         [IDL.Opt(ExternalBlob)],
@@ -197,11 +213,13 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'listSubjects' : IDL.Func([], [IDL.Vec(Subject)], ['query']),
+    'listTopicImages' : IDL.Func([TopicId], [IDL.Vec(TopicImage)], ['query']),
     'listTopicsForSubject' : IDL.Func([SubjectId], [IDL.Vec(Topic)], ['query']),
     'removePastPaper' : IDL.Func([PastPaperId], [], []),
     'removeSubTopic' : IDL.Func([SubTopicId], [], []),
     'removeSubject' : IDL.Func([SubjectId], [], []),
     'removeTopic' : IDL.Func([TopicId], [], []),
+    'removeTopicImage' : IDL.Func([TopicImageId], [], []),
     'setSubjectImage' : IDL.Func([SubjectId, ExternalBlob], [], []),
     'updatePastPaperNotes' : IDL.Func([PastPaperId, IDL.Text], [], []),
     'updateSubTopicNotes' : IDL.Func([SubTopicId, IDL.Text], [], []),
